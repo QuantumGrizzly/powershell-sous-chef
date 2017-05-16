@@ -229,27 +229,29 @@ Function Get-SessionDrive {
 		Set-Log -Level 'V2' -Message "Process"
 		#Format the search used in Get-PSDrive depending of parameters
 
+		#Search for the network drive using by looking for the UNC in Root
 		If ($UNC) {
 			Try {
-				#Search for the network drive using the format T:\
-				$Format = $Letter + ':\'
-				$Drive = Get-PSDrive -PSProvider FileSystem | `
-					Where-Object {$_.Root -eq $UNC} `
-					-ErrorAction Stop
-				Set-Log -Level 'V3' -Message "Mapped folder $UNC found"
+				$Drive = Get-PSDrive -PSProvider FileSystem | Where-Object {$_.DisplayRoot -like $UNC } -ErrorAction Stop
+				#$Drive = Get-PSDrive -PSProvider FileSystem | Where-Object {$_.Root -like $UNC } -ErrorAction Stop
+				If ($Drive) {
+					Set-Log -Level 'V3' -Message "Mapped folder found" -Value $UNC
+				} Else {
+					Set-Log -Level 'V3' -Message "Mapped folder not found" -Value $UNC
+				}
 				Return $Drive
 			} Catch {
-				Set-Log -Level 'V3' -Message "Mapped folder $UNC not found"
+				Set-Log -Level 'V3' -Message "Mapped folder not found" -Value $UNC
 			}
+		#Search for a drive by looking at the Letter
 		} Elseif ($Letter) {
 			Try {
-				$Drive = Get-PSDrive -PSProvider FileSystem | `
-					Where-Object {$_.Root -eq $UNC} `
+				$Drive = Get-PSDrive -PSProvider FileSystem -Name $Letter `
 					-ErrorAction Stop
-				Set-Log -Level 'V3' -Message "Drive $Letter found"
+				Set-Log -Level 'V3' -Message "Drive found" -Value $Letter
 				Return $Drive
 			} Catch {
-				Set-Log -Level 'V3' -Message "Drive $Letter not found"
+				Set-Log -Level 'V3' -Message "Drive not found" -Value $Letter
 			}
 		}
 	}
@@ -266,6 +268,10 @@ Function Set-SessionDrive {
 		.DESCRIPTION
 		The function will check if a drive already exists under the letter. If not
 		it will set it up as either a session or persistent drive.
+
+		Establish the network session one of two methods:
+		1) Persistent, the drive will be mounted on the OS and available to all
+		2) Non-Persistent Global, the session will be available within PowerShell
 		.EXAMPLE
 		Get-SessionDrive -Letter 'T'
 		.PARAMETER Letter
@@ -281,7 +287,7 @@ Function Set-SessionDrive {
 		[ValidateLength(1,100)]
 		[string[]]$UNC,
 
-		[Parameter(Mandatory=$False,
+		[Parameter(Mandatory=$True,
     ValueFromPipeline=$True,
     ValueFromPipelineByPropertyName=$True,
       HelpMessage='Which drive letter do you want to check')]
@@ -303,58 +309,32 @@ Function Set-SessionDrive {
   Process {
 		Set-Log -Level 'V2' -Message "Process"
 
-		#Check if a session already exists under the same share UNC
-
-
-
-
-		#Start execution of the share creation
-		Try {
-			#New-PSDrive -Name 'Temp' -PSProvider 'FileSystem' -Root $UNC
-			#$Drive = Get-PSDrive -PSProvider FileSystem -Name $Letter -ErrorAction Stop
-			#Set-Log -Level 'V3' -Message "Drive $Letter found"
-			#Return $Drive
-		} Catch {
-			Set-Log -Level 'V3' -Message "Error when trying to establish session"
-			#Write-Warning 'Drive not found'
-			#Throw "[-] Drive $Letter does not exist [Error]"
-		}
-
-		If ($Letter) {
-			$DriveExisting = Get-SessionDrive -Letter $Letter
-			Set-Log -Level 'V2' -Message "Drive: $DriveExisting"
-			Set-Log -Level 'N2' -Message "`n"
-		}
-
-		#Start session creation process
-		#First IF operator checking if there is already an existing Mapped drive
-		$RootExisting = Get-SessionDrive -UNC $UNC
-		Set-Log -Level 'V2' -Message "Mapped Drive: $RootExisting"
+		#Check if the network session is already established to the shared folder
+		$ConcurrentSession = Get-SessionDrive -UNC $UNC
 		Set-Log -Level 'N2' -Message "`n"
-		If ($RootExisting) {
-			#"Test A1 $RootExisting"
-			#The shared folder session already exists, no need to continue
-			Set-Log -Level 'V3' -Message "Share $UNC already exists"
-		} Else {
-			#Check if the drive letter already exists on the system
-			If ($Letter) {
-				$DriveExisting = Get-SessionDrive -Letter $Letter
-				Set-Log -Level 'V2' -Message "Drive: $DriveExisting"
-				Set-Log -Level 'N2' -Message "`n"
+
+		#Proceed if there is not session already established
+		If (-Not $ConcurrentSession) {
+			#Check if the drive letter is already used
+			$ConcurrentDrive = Get-SessionDrive -Letter $Letter
+			Set-Log -Level 'N2' -Message "`n"
+
+			#Proceed if there is no drive already using the letter
+			If ($ConcurrentDrive) {
+				Set-Log -Level 'V3' -Message "Drive letter already taken" -Value $Letter
 			} Else {
+				Set-Log -Level 'V3' -Message "Drive letter available" -Value $Letter
 
-			}
-
-			#"Test 03 $RootExisting"
-			Set-Log -Level 'V3' -Message "Creating the session"
-			#Second IF operator checking if the shared folder session should be mapped
-			If ($Mapped) {
-				New-PSDrive -Name $Letter -Persist -PSProvider 'FileSystem' -Root "$UNC" #-Scope Global
-			} Else {
-				New-PSDrive -Name $Letter -PSProvider 'FileSystem' -Root "$UNC" -Scope Global
-			}
-		}
-
+				#Establish network session in a persistent or non-persistent way
+				If ($Mapped) {
+					Set-Log -Level 'V3' -Message "Establish persistent session" -Value $Letter
+					New-PSDrive -Name $Letter -PSProvider 'FileSystem' -Root "$UNC" -Scope Global -Persist
+				} Else {
+					Set-Log -Level 'V3' -Message "Establish session" -Value $Letter
+					New-PSDrive -Name $Letter -PSProvider 'FileSystem' -Root "$UNC" -Scope Global
+				} #End of IF $Mapped
+			} #End of IF $concurrentDrive
+		} #End of If $ConcurrentSession
 	} #End of Process block
 	End {
 		Set-Log -Level 'V2' -Message "End"
