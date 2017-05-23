@@ -2,6 +2,9 @@
 # Script Automation
 ################################################################################
 
+################################################################################
+# PowerShell / Log
+################################################################################
 Function Log-Invocation {
 	<#
 	.SYNOPSIS
@@ -204,7 +207,78 @@ Function Format-Verbose {
 }
 
 ################################################################################
-# Network
+# System / Process
+################################################################################
+Function Invoke-Executable {
+  <#
+		.SYNOPSIS
+		Run an executable program.
+		.DESCRIPTION
+		The function will execute a program with or without arguments provided.
+		.EXAMPLE
+		Invoke-Executable -Executable $Path -Arguments $Arguments -Wait:$True
+		.PARAMETER Executable
+		Path of the executable to run.
+		.PARAMETER Arguments
+		Arguments to run against the executable.
+		.PARAMETER Wait
+		Waiting the execution is finished.
+  #>
+  [CmdletBinding()]
+	#[CmdletBinding(SupportsShouldProcess=$True,ConfirmImpact='Low')]
+  Param (
+		[Parameter(Mandatory=$True,
+		ValueFromPipeline=$True,
+		ValueFromPipelineByPropertyName=$True,
+			HelpMessage='Path of the executable to run')]
+		[ValidateLength(1,260)]
+		[string[]]$Executable,
+
+		[Parameter(Mandatory=$True,
+    ValueFromPipeline=$True,
+    ValueFromPipelineByPropertyName=$True,
+      HelpMessage='Arguments to run against the executable')]
+    [ValidateLength(1,100)]
+    [string]$Arguments,
+
+		[Parameter(Mandatory=$False,
+		ValueFromPipeline=$True,
+		ValueFromPipelineByPropertyName=$True,
+			HelpMessage='Waiting the execution is finished')]
+		[switch[]]$Wait = $False
+  )
+
+	Begin {
+		$MyInvocation | Log-Invocation
+		Set-Log -Level 'V2' -Message "Begin"
+  }
+  Process {
+		Set-Log -Level 'V2' -Message "Process"
+
+		$Process = New-Object 'Diagnostics.ProcessStartInfo'
+    $Process.FileName = $Executable
+    $Process.Arguments = $Arguments
+
+    Set-Log -Level 'V3' -Message "File Name" -Value $Process.FileName
+    Set-Log -Level 'V3' -Message "Arguments" -Value $Process.Arguments
+
+		Set-Log -Level 'V3' -Message "Starting the program execution"
+    $RunningProcess = [Diagnostics.Process]::Start($Process)
+    If ($Wait) {
+				Set-Log -Level 'V3' -Message "Waiting the end of the execution"
+        #$Wait.WaitForExit();
+				$RunningProcess.WaitForExit();
+				Set-Log -Level 'V3' -Message "Execution finished"
+    }
+
+	} #End of Process block
+	End {
+		Set-Log -Level 'V2' -Message "End"
+	} #End of End block
+} #Enf of function
+
+################################################################################
+# Network / SMB
 ################################################################################
 Function Get-SessionDrive {
   <#
@@ -356,43 +430,30 @@ Function Set-SessionDrive {
 	} #End of End block
 } #Enf of function
 
-Function Invoke-Executable {
+################################################################################
+# Network / AWS
+################################################################################
+Function Test-AWSSession {
   <#
 		.SYNOPSIS
-		Run an executable program.
+		Test the connection with AWS API.
 		.DESCRIPTION
-		The function will execute a program with or without arguments provided.
+		The function execute a test command to AWS API to verify whether the session
+		is initialized.
 		.EXAMPLE
-		Invoke-Executable -Executable $Path -Arguments $Arguments -Wait:$True
-		.PARAMETER Executable
-		Path of the executable to run.
-		.PARAMETER Arguments
-		Arguments to run against the executable.
-		.PARAMETER Wait
-		Waiting the execution is finished.
+		Test-AWSSession -Command $Command
+		.PARAMETER Command
+		Command to run.
   #>
   [CmdletBinding()]
 	#[CmdletBinding(SupportsShouldProcess=$True,ConfirmImpact='Low')]
   Param (
-		[Parameter(Mandatory=$True,
-		ValueFromPipeline=$True,
-		ValueFromPipelineByPropertyName=$True,
-			HelpMessage='Path of the executable to run')]
-		[ValidateLength(1,260)]
-		[string[]]$Executable,
-
-		[Parameter(Mandatory=$True,
-    ValueFromPipeline=$True,
-    ValueFromPipelineByPropertyName=$True,
-      HelpMessage='Arguments to run against the executable')]
-    [ValidateLength(1,100)]
-    [string]$Arguments,
-
 		[Parameter(Mandatory=$False,
 		ValueFromPipeline=$True,
 		ValueFromPipelineByPropertyName=$True,
-			HelpMessage='Waiting the execution is finished')]
-		[switch[]]$Wait = $False
+		HelpMessage='Test to perform')]
+		[ValidateSet('Alias','AMI', 'Cookie')]
+		[string]$Test = 'EC2'
   )
 
 	Begin {
@@ -402,21 +463,107 @@ Function Invoke-Executable {
   Process {
 		Set-Log -Level 'V2' -Message "Process"
 
-		$Process = New-Object 'Diagnostics.ProcessStartInfo'
-    $Process.FileName = $Executable
-    $Process.Arguments = $Arguments
+		#Perform test command
+		Try {
+			Switch ($Test) {
+				alias {
+					$ScriptBlock = {Get-IAMAccountAlias}
+				}
+				ami {
+					$ScriptBlock = {aws ec2 describe-images --image-ids ami-e659c7f0}
+				}
+				cookie { #untested
+					$ScriptBlock = {}
+				}
 
-    Set-Log -Level 'V3' -Message "File Name" -Value $Process.FileName
-    Set-Log -Level 'V3' -Message "Arguments" -Value $Process.Arguments
+			}
+			Set-Log -Level 'V3' -Message "Invoke Command"
+			$Result = Invoke-Command -command $ScriptBlock -ErrorAction Stop
 
-		Set-Log -Level 'V3' -Message "Starting the program execution"
-    $RunningProcess = [Diagnostics.Process]::Start($Process)
-    If ($Wait) {
-				Set-Log -Level 'V3' -Message "Waiting the end of the execution"
-        #$Wait.WaitForExit();
-				$RunningProcess.WaitForExit();
-				Set-Log -Level 'V3' -Message "Execution finished"
-    }
+			Set-Log -Level 'V3' -Message "Result" -Value $Result
+			Return $Result
+		} Catch {
+			Set-Log -Level 'V3' -Message "An error occured while trying to connect AWS."
+			Set-Log -Level 'V3' -Message "Exception code" -Value $error[0].ToString()
+			Write-Debug $error[0].ToString()
+		}
+	} #End of Process block
+	End {
+		Set-Log -Level 'V2' -Message "End"
+	} #End of End block
+} #Enf of function
+
+Function Set-AWSSession {
+  <#
+		.SYNOPSIS
+		Set the connection with AWS API.
+		.DESCRIPTION
+		The function establish a connection to AWS CLI by using the tool aws-adfs.
+		.LINK
+		https://github.com/venth/aws-adfs
+		https://pypi.python.org/pypi/aws-adfs/0.3.3
+		.EXAMPLE
+		Set-AWSSession -Command $Command
+		.PARAMETER Command
+		Command to run.
+  #>
+  [CmdletBinding()]
+	#[CmdletBinding(SupportsShouldProcess=$True,ConfirmImpact='Low')]
+  Param (
+		[Parameter(Mandatory=$False,
+		ValueFromPipeline=$True,
+		ValueFromPipelineByPropertyName=$True,
+		HelpMessage='Test if session exists first')]
+		[ValidateNotNullOrEmpty()]
+		#[ValidateLength(1,260)]
+		[boolean]$Test = $True,
+
+		[Parameter(Mandatory=$False,
+		ValueFromPipeline=$True,
+		ValueFromPipelineByPropertyName=$True,
+		HelpMessage='AWS Profile to use')]
+		[ValidateNotNullOrEmpty()]
+		[ValidateLength(1,50)]
+		[string]$AWSProfile = 'nonprod'
+  )
+
+	Begin {
+		$MyInvocation | Log-Invocation
+		Set-Log -Level 'V2' -Message "Begin"
+  }
+  Process {
+		Set-Log -Level 'V2' -Message "Process"
+
+		#Initialize error codes
+		$ErrorSecurityToken = 'The security token included in the request is expired'
+
+		#Perform test command
+		If ($Test -eq $True) {
+			Set-Log -Level 'V3' -Message "Initialize Test-AWSSession."
+			$Status = Test-AWSSession -Test 'Alias'
+			Set-Log -Level 'N2' -Message "`n"
+
+			If ($Status) {
+				Set-Log -Level 'V3' -Message "Security token found, no need to continue."
+				Return
+			} Else {
+				Set-Log -Level 'V3' -Message "Security token not found, proceeding."
+			}
+		}
+
+		#Perform execution of the command establishing connection
+		Try {
+			$ScriptBlock = {aws-adfs login --no-ssl-verification}
+			Set-Log -Level 'V3' -Message "Command" -Value "$ScriptBlock"
+
+			Set-Log -Level 'V3' -Message "Executing command" -Value "$ScriptBlock"
+			$Result = Invoke-Command -command $ScriptBlock -ErrorAction Stop
+
+			Return $Result
+		} Catch {
+			Set-Log -Level 'V3' -Message "An error occured while trying to setup connection."
+			Set-Log -Level 'V3' -Message "Exception code" -Value $error[0].ToString()
+		}
 
 	} #End of Process block
 	End {
