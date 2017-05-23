@@ -571,5 +571,84 @@ Function Set-AWSSession {
 	} #End of End block
 } #Enf of function
 
+Function Invoke-Ec2Command {
+  <#
+		.SYNOPSIS
+		Send commands to AWS API to manipulate EC2 objects.
+		.DESCRIPTION
+		The function send commands using AWS CLI (aws.exe) to get describe, edit,
+		create or delete EC2 objects.
+		.EXAMPLE
+		Run-Ec2Commands -Action
+  #>
+  [CmdletBinding()]
+	#[CmdletBinding(SupportsShouldProcess=$True,ConfirmImpact='Medium')]
+  Param (
+		[Parameter(Mandatory=$False,
+		ValueFromPipeline=$True,
+		ValueFromPipelineByPropertyName=$True,
+		HelpMessage='Type of action you would like to perform')]
+		[ValidateLength(1,50)]
+		#[ValidateSet('Launch','Start', 'Stop', 'Terminate', 'describe-instances', 'List-Volumes')]
+		[string]$Action,
+
+		[Parameter(Mandatory=$False,
+		ValueFromPipeline=$True,
+		ValueFromPipelineByPropertyName=$True,
+		HelpMessage='Path of the JSON file used in input')]
+		[ValidateLength(1,260)]
+		[string]$JsonPath,
+
+		[Parameter(Mandatory=$False,
+		ValueFromPipeline=$True,
+		ValueFromPipelineByPropertyName=$True,
+		HelpMessage='ID of the EC2 instance')]
+		[ValidateLength(17,19)]
+		[string]$InstanceId,
+
+		[Parameter(Mandatory=$False,
+		ValueFromPipeline=$True,
+		ValueFromPipelineByPropertyName=$True,
+		HelpMessage='ID of the EC2 Volume')]
+		[ValidateLength(19,21)]
+		[string]$VolumeId,
+
+		[Parameter(Mandatory=$False,
+		ValueFromPipeline=$True,
+		ValueFromPipelineByPropertyName=$True,
+		HelpMessage='Tag specification of the object')]
+		[ValidateLength(1,1000)]
+		[string]$TagSpecification
+  )
+
+	Begin {
+		$MyInvocation | Log-Invocation
+		Set-Log -Level 'V2' -Message "Begin"
+
+  }
+  Process {
+		Set-Log -Level 'V2' -Message "Process"
+
+		Switch ($Action) {
+			#Launch an ec2 instance with or without tags
+			launch_json {aws ec2 run-instances --cli-input-json file://$JsonPath}		#Working
+			launch_json_tags {
+				aws ec2 run-instances `
+					--cli-input-json file://$JsonPath `
+					--tag-specifications $TagSpecification
+				}
+				
+			start {aws ec2 start-instances --instance-ids $InstanceId}
+			stop {aws ec2 stop-instances --instance-ids $InstanceId}
+			describe-instances {aws ec2 describe-instances --instance-ids $InstanceId}
+			list-volumes {aws ec2 describe-instances --instance-ids $InstanceId}
+			terminate-instances {aws ec2 terminate-instances --instance-ids $InstanceId}
+			describe-volumes {aws ec2 describe-volumes --volume-ids $VolumeId}
+		}
+	} #End of Process block
+	End {
+		Set-Log -Level 'V2' -Message "End"
+	} #End of End block
+} #Enf of function
 
 ################################################################################

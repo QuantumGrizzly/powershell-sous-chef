@@ -1,0 +1,25 @@
+[
+  {
+    "ResourceType": "instance",
+    "Tags": [
+      {
+        "Key": "Name",
+        "Value": "Server"
+      },{
+        "Key": "ApplicationName",
+        "Value": "App"
+      }
+    ]
+  },{
+    "ResourceType": "volume",
+    "Tags": [
+      {
+        "Key": "Name",
+        "Value": "Server"
+      },{
+        "Key": "ApplicationName",
+        "Value": "App"
+      }
+    ]
+  }
+]
