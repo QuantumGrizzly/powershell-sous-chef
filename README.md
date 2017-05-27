@@ -14,10 +14,10 @@ By providing those functions into libraries, it avoid situations where developer
 ## Usage
 Functions provided in the library:
 
-### Log-Invocation
+### Write-Invocation
 
 ```PowerShell
-Function Log-Invocation {
+Function Write-Invocation {
 	<#
 	.SYNOPSIS
 	Log a function initialization in Verbose.
@@ -30,9 +30,9 @@ Function Log-Invocation {
 	#>
 ```
 
-### Set-Log
+### Write-Log
 ```PowerShell
-Function Set-Log {
+Function Write-Log {
 	<#
 	.SYNOPSIS
 	Register logging events in the OUTPUT or VERBOSE pipeline.
@@ -40,7 +40,7 @@ Function Set-Log {
 	The function logs strings, variable or objects into the OUTPUT or VERBORSE
 	pileline of the PowerShell session.
 	.EXAMPLE
-	Set-Log -Level 'V1' -String 'Starting script'
+	Write-Log -Level 'V1' -String 'Starting script'
 	.PARAMETER Level
 	Type of indentation used:
 	V1 '----->'

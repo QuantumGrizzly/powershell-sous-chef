@@ -19,7 +19,7 @@ $LibraryPath	= Split-Path -Path $ScriptPath
 . "$LibraryPath\$LibraryName"
 
 #Start execution
-$MyInvocation | Log-Invocation -Main:$True
+$MyInvocation | Write-Invocation -Main:$True
 
 ################################################################################
 # Main
@@ -28,7 +28,7 @@ $MyInvocation | Log-Invocation -Main:$True
 #CLS; .\Get-UpdateInstalled.ps1 -Verbose
 
 #Initialization
-Set-Log -Level 'V2' -Message "Initialize variables"
+Write-Log -Level 'V2' -Message "Initialize variables"
 
 #KB's relevant to fix WannaCrypt vulnerability
 $KB = @(
@@ -65,28 +65,28 @@ $KB = @(
 4019264,
 4019472
 )
-Set-Log -Level 'V3' -Message "KB's to search" -Value $KB.Count
+Write-Log -Level 'V3' -Message "KB's to search" -Value $KB.Count
 
 #Search for the KB using the class qfe
-Set-Log -Level 'V2' -Message "Gather installed KBs from system"
+Write-Log -Level 'V2' -Message "Gather installed KBs from system"
 $InstalledKB = Get-WmiObject -class win32_quickfixengineering
 
 #Different method to return all KB's (including non-security)
 #But it uses a different property format for HotFixID
 #$InstalledKB = wmic qfe list
 
-Set-Log -Level 'V3' -Message "KB's installed" -Value $InstalledKB.Count
+Write-Log -Level 'V3' -Message "KB's installed" -Value $InstalledKB.Count
 
 #Loop for KB
-Set-Log -Level 'V2' -Message "Start KB Loop"
+Write-Log -Level 'V2' -Message "Start KB Loop"
 Foreach ($Id in $KB) {
-  #Set-Log -Level 'V3' -Message "Searching KB" -Value $Id
+  #Write-Log -Level 'V3' -Message "Searching KB" -Value $Id
   $Result = $InstalledKB | Where-Object {$_.HotFixID -match "$Id"}
   If ($Result) {
-    Set-Log -Level 'O2' -Message "KB Found:" -Value $Id
-    Set-Log -Level 'O2' -Message "Installed On:" -Value $Result.InstalledOn
+    Write-Log -Level 'O2' -Message "KB Found:" -Value $Id
+    Write-Log -Level 'O2' -Message "Installed On:" -Value $Result.InstalledOn
   } Else {
-    Set-Log -Level 'V3' -Message "KB not Found:" -Value $Id
+    Write-Log -Level 'V3' -Message "KB not Found:" -Value $Id
   }
 
 #>

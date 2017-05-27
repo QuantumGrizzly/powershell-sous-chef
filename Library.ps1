@@ -5,7 +5,7 @@
 ################################################################################
 # PowerShell / Log
 ################################################################################
-Function Log-Invocation {
+Function Write-Invocation {
 	<#
 	.SYNOPSIS
 	Log a function initialization in Verbose.
@@ -42,27 +42,27 @@ Function Log-Invocation {
 		#First IF checks if Function is called from the script body (Main) or from
 		#another function
 		If ($Main) {
-			Set-Log -Level 'V1' -Message "Script: $Name"
-			Set-Log -Level 'V2' -Message "Path" -Value $Path
+			Write-Log -Level 'V1' -Message "Script: $Name"
+			Write-Log -Level 'V2' -Message "Path" -Value $Path
 		} Else {
 			#Second IF checks if function is called from within another function
 			#The trigger is the value stored in $Invocation.ScriptName
 			#The value will be .\Library.ps1 if called from another Library function
 			If ($Invocation.ScriptName -like "*Library*") {
-				Set-Log -Level 'N1' -Message "`n"
-				#Set-Log -Level 'V3' -Message "`n"
-				#Set-Log -Level 'V2' -Message "-----NESTED FUNCTION-----"
+				Write-Log -Level 'N1' -Message "`n"
+				#Write-Log -Level 'V3' -Message "`n"
+				#Write-Log -Level 'V2' -Message "-----NESTED FUNCTION-----"
 
-				Set-Log -Level 'V2' -Message "Function: $Name"
+				Write-Log -Level 'V2' -Message "Function: $Name"
 			} Else {
-				Set-Log -Level 'V1' -Message "Function: $Name"
+				Write-Log -Level 'V1' -Message "Function: $Name"
 			}
 		}
-		Set-Log -Level 'V2' -Message "Parameters" -Value $Line
+		Write-Log -Level 'V2' -Message "Parameters" -Value $Line
 	} #End Process
 } #End Function
 
-Function Set-Log {
+Function Write-Log {
 	<#
 	.SYNOPSIS
 	Register logging events in the OUTPUT or VERBOSE pipeline.
@@ -70,7 +70,7 @@ Function Set-Log {
 	The function logs strings, variable or objects into the OUTPUT or VERBORSE
 	pileline of the PowerShell session.
 	.EXAMPLE
-	Set-Log -Level 'V1' -String 'Starting script'
+	Write-Log -Level 'V1' -String 'Starting script'
 	.PARAMETER Level
 	Type of indentation used:
 	V1 '----->'
@@ -249,31 +249,31 @@ Function Invoke-Executable {
   )
 
 	Begin {
-		$MyInvocation | Log-Invocation
-		Set-Log -Level 'V2' -Message "Begin"
+		$MyInvocation | Write-Invocation
+		Write-Log -Level 'V2' -Message "Begin"
   }
   Process {
-		Set-Log -Level 'V2' -Message "Process"
+		Write-Log -Level 'V2' -Message "Process"
 
 		$Process = New-Object 'Diagnostics.ProcessStartInfo'
     $Process.FileName = $Executable
     $Process.Arguments = $Arguments
 
-    Set-Log -Level 'V3' -Message "File Name" -Value $Process.FileName
-    Set-Log -Level 'V3' -Message "Arguments" -Value $Process.Arguments
+    Write-Log -Level 'V3' -Message "File Name" -Value $Process.FileName
+    Write-Log -Level 'V3' -Message "Arguments" -Value $Process.Arguments
 
-		Set-Log -Level 'V3' -Message "Starting the program execution"
+		Write-Log -Level 'V3' -Message "Starting the program execution"
     $RunningProcess = [Diagnostics.Process]::Start($Process)
     If ($Wait) {
-				Set-Log -Level 'V3' -Message "Waiting the end of the execution"
+				Write-Log -Level 'V3' -Message "Waiting the end of the execution"
         #$Wait.WaitForExit();
 				$RunningProcess.WaitForExit();
-				Set-Log -Level 'V3' -Message "Execution finished"
+				Write-Log -Level 'V3' -Message "Execution finished"
     }
 
 	} #End of Process block
 	End {
-		Set-Log -Level 'V2' -Message "End"
+		Write-Log -Level 'V2' -Message "End"
 	} #End of End block
 } #Enf of function
 
@@ -310,11 +310,11 @@ Function Get-SessionDrive {
   )
 
 	Begin {
-		$MyInvocation | Log-Invocation
-		Set-Log -Level 'V2' -Message "Begin"
+		$MyInvocation | Write-Invocation
+		Write-Log -Level 'V2' -Message "Begin"
   }
   Process {
-		Set-Log -Level 'V2' -Message "Process"
+		Write-Log -Level 'V2' -Message "Process"
 
 		#Search for the network drive by looking for the UNC in Root
 		If ($UNC) {
@@ -324,29 +324,29 @@ Function Get-SessionDrive {
 				$Drive = Get-PSDrive -PSProvider FileSystem | Where-Object {$_.DisplayRoot -like $UNC } -ErrorAction Stop
 				If (-Not $Drive) {$Drive = Get-PSDrive -PSProvider FileSystem | Where-Object {$_.Root -like $UNC } -ErrorAction Stop}
 				If ($Drive) {
-					Set-Log -Level 'V3' -Message "Mapped folder found" -Value $UNC
+					Write-Log -Level 'V3' -Message "Mapped folder found" -Value $UNC
 				} Else {
-					Set-Log -Level 'V3' -Message "Mapped folder not found" -Value $UNC
+					Write-Log -Level 'V3' -Message "Mapped folder not found" -Value $UNC
 				}
 				Return $Drive
 			} Catch {
-				Set-Log -Level 'V3' -Message "Mapped folder not found" -Value $UNC
+				Write-Log -Level 'V3' -Message "Mapped folder not found" -Value $UNC
 			}
 		#Search for a drive by looking at the Letter
 		} Elseif ($Letter) {
 			Try {
 				$Drive = Get-PSDrive -PSProvider FileSystem -Name $Letter `
 					-ErrorAction Stop
-				Set-Log -Level 'V3' -Message "Drive found" -Value $Letter
+				Write-Log -Level 'V3' -Message "Drive found" -Value $Letter
 				Return $Drive
 			} Catch {
-				Set-Log -Level 'V3' -Message "Drive not found" -Value $Letter
+				Write-Log -Level 'V3' -Message "Drive not found" -Value $Letter
 			}
 		}
 	}
 
 	End {
-		Set-Log -Level 'V2' -Message "End"
+		Write-Log -Level 'V2' -Message "End"
 	}
 }
 
@@ -392,41 +392,41 @@ Function Set-SessionDrive {
   )
 
 	Begin {
-		$MyInvocation | Log-Invocation
-		Set-Log -Level 'V2' -Message "Begin"
+		$MyInvocation | Write-Invocation
+		Write-Log -Level 'V2' -Message "Begin"
   }
   Process {
-		Set-Log -Level 'V2' -Message "Process"
+		Write-Log -Level 'V2' -Message "Process"
 
 		#Check if the network session is already established to the shared folder
 		$ConcurrentSession = Get-SessionDrive -UNC $UNC
-		Set-Log -Level 'N2' -Message "`n"
+		Write-Log -Level 'N2' -Message "`n"
 
 		#Proceed if there is not session already established
 		If (-Not $ConcurrentSession) {
 			#Check if the drive letter is already used
 			$ConcurrentDrive = Get-SessionDrive -Letter $Letter
-			Set-Log -Level 'N2' -Message "`n"
+			Write-Log -Level 'N2' -Message "`n"
 
 			#Proceed if there is no drive already using the letter
 			If ($ConcurrentDrive) {
-				Set-Log -Level 'V3' -Message "Drive letter already taken" -Value $Letter
+				Write-Log -Level 'V3' -Message "Drive letter already taken" -Value $Letter
 			} Else {
-				Set-Log -Level 'V3' -Message "Drive letter available" -Value $Letter
+				Write-Log -Level 'V3' -Message "Drive letter available" -Value $Letter
 
 				#Establish network session in a persistent or non-persistent way
 				If ($Mapped) {
-					Set-Log -Level 'V3' -Message "Establish persistent session" -Value $Letter
+					Write-Log -Level 'V3' -Message "Establish persistent session" -Value $Letter
 					New-PSDrive -Name $Letter -PSProvider 'FileSystem' -Root "$UNC" -Scope Global -Persist
 				} Else {
-					Set-Log -Level 'V3' -Message "Establish session" -Value $Letter
+					Write-Log -Level 'V3' -Message "Establish session" -Value $Letter
 					New-PSDrive -Name $Letter -PSProvider 'FileSystem' -Root "$UNC" -Scope Global
 				} #End of IF $Mapped
 			} #End of IF $concurrentDrive
 		} #End of If $ConcurrentSession
 	} #End of Process block
 	End {
-		Set-Log -Level 'V2' -Message "End"
+		Write-Log -Level 'V2' -Message "End"
 	} #End of End block
 } #Enf of function
 
@@ -457,11 +457,11 @@ Function Test-AWSSession {
   )
 
 	Begin {
-		$MyInvocation | Log-Invocation
-		Set-Log -Level 'V2' -Message "Begin"
+		$MyInvocation | Write-Invocation
+		Write-Log -Level 'V2' -Message "Begin"
   }
   Process {
-		Set-Log -Level 'V2' -Message "Process"
+		Write-Log -Level 'V2' -Message "Process"
 
 		#Perform test command
 		Try {
@@ -477,19 +477,19 @@ Function Test-AWSSession {
 				}
 
 			}
-			Set-Log -Level 'V3' -Message "Invoke Command"
+			Write-Log -Level 'V3' -Message "Invoke Command"
 			$Result = Invoke-Command -command $ScriptBlock -ErrorAction Stop
 
-			Set-Log -Level 'V3' -Message "Result" -Value $Result
+			Write-Log -Level 'V3' -Message "Result" -Value $Result
 			Return $Result
 		} Catch {
-			Set-Log -Level 'V3' -Message "An error occured while trying to connect AWS."
-			Set-Log -Level 'V3' -Message "Exception code" -Value $error[0].ToString()
+			Write-Log -Level 'V3' -Message "An error occured while trying to connect AWS."
+			Write-Log -Level 'V3' -Message "Exception code" -Value $error[0].ToString()
 			Write-Debug $error[0].ToString()
 		}
 	} #End of Process block
 	End {
-		Set-Log -Level 'V2' -Message "End"
+		Write-Log -Level 'V2' -Message "End"
 	} #End of End block
 } #Enf of function
 
@@ -528,46 +528,46 @@ Function Set-AWSSession {
   )
 
 	Begin {
-		$MyInvocation | Log-Invocation
-		Set-Log -Level 'V2' -Message "Begin"
+		$MyInvocation | Write-Invocation
+		Write-Log -Level 'V2' -Message "Begin"
   }
   Process {
-		Set-Log -Level 'V2' -Message "Process"
+		Write-Log -Level 'V2' -Message "Process"
 
 		#Initialize error codes
 		$ErrorSecurityToken = 'The security token included in the request is expired'
 
 		#Perform test command
 		If ($Test -eq $True) {
-			Set-Log -Level 'V3' -Message "Initialize Test-AWSSession."
+			Write-Log -Level 'V3' -Message "Initialize Test-AWSSession."
 			$Status = Test-AWSSession -Test 'Alias'
-			Set-Log -Level 'N2' -Message "`n"
+			Write-Log -Level 'N2' -Message "`n"
 
 			If ($Status) {
-				Set-Log -Level 'V3' -Message "Security token found, no need to continue."
+				Write-Log -Level 'V3' -Message "Security token found, no need to continue."
 				Return
 			} Else {
-				Set-Log -Level 'V3' -Message "Security token not found, proceeding."
+				Write-Log -Level 'V3' -Message "Security token not found, proceeding."
 			}
 		}
 
 		#Perform execution of the command establishing connection
 		Try {
 			$ScriptBlock = {aws-adfs login --no-ssl-verification}
-			Set-Log -Level 'V3' -Message "Command" -Value "$ScriptBlock"
+			Write-Log -Level 'V3' -Message "Command" -Value "$ScriptBlock"
 
-			Set-Log -Level 'V3' -Message "Executing command" -Value "$ScriptBlock"
+			Write-Log -Level 'V3' -Message "Executing command" -Value "$ScriptBlock"
 			$Result = Invoke-Command -command $ScriptBlock -ErrorAction Stop
 
 			Return $Result
 		} Catch {
-			Set-Log -Level 'V3' -Message "An error occured while trying to setup connection."
-			Set-Log -Level 'V3' -Message "Exception code" -Value $error[0].ToString()
+			Write-Log -Level 'V3' -Message "An error occured while trying to setup connection."
+			Write-Log -Level 'V3' -Message "Exception code" -Value $error[0].ToString()
 		}
 
 	} #End of Process block
 	End {
-		Set-Log -Level 'V2' -Message "End"
+		Write-Log -Level 'V2' -Message "End"
 	} #End of End block
 } #Enf of function
 
@@ -622,12 +622,12 @@ Function Invoke-Ec2Command {
   )
 
 	Begin {
-		$MyInvocation | Log-Invocation
-		Set-Log -Level 'V2' -Message "Begin"
+		$MyInvocation | Write-Invocation
+		Write-Log -Level 'V2' -Message "Begin"
 
   }
   Process {
-		Set-Log -Level 'V2' -Message "Process"
+		Write-Log -Level 'V2' -Message "Process"
 
 		Switch ($Action) {
 			#Launch an ec2 instance with or without tags
@@ -637,7 +637,7 @@ Function Invoke-Ec2Command {
 					--cli-input-json file://$JsonPath `
 					--tag-specifications $TagSpecification
 				}
-				
+
 			start {aws ec2 start-instances --instance-ids $InstanceId}
 			stop {aws ec2 stop-instances --instance-ids $InstanceId}
 			describe-instances {aws ec2 describe-instances --instance-ids $InstanceId}
@@ -647,7 +647,7 @@ Function Invoke-Ec2Command {
 		}
 	} #End of Process block
 	End {
-		Set-Log -Level 'V2' -Message "End"
+		Write-Log -Level 'V2' -Message "End"
 	} #End of End block
 } #Enf of function
 

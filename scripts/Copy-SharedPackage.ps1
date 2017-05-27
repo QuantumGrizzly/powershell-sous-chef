@@ -36,7 +36,7 @@ $LibraryPath	= Split-Path -Path $ScriptPath
 . "$LibraryPath\$LibraryName"
 
 #Start execution
-$MyInvocation | Log-Invocation -Main:$True
+$MyInvocation | Write-Invocation -Main:$True
 
 #Set up network sessions
 Set-SessionDrive -UNC $Share -Letter "$Letter" -Mapped:$Mapped

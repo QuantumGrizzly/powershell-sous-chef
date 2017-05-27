@@ -32,7 +32,7 @@ $LibraryPath	= Split-Path -Path $ScriptPath
 . "$LibraryPath\$LibraryName"
 
 #Start execution
-$MyInvocation | Log-Invocation -Main:$True
+$MyInvocation | Write-Invocation -Main:$True
 
 ################################################################################
 # Main

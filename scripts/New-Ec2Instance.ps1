@@ -41,20 +41,20 @@ $LibraryPath	= Split-Path -Path $ScriptPath
 . "$LibraryPath\$LibraryName"
 
 #Start execution
-$MyInvocation | Log-Invocation -Main:$True
+$MyInvocation | Write-Invocation -Main:$True
 
 ################################################################################
 # Main
 ################################################################################
 #Check the connection to AWS works
-Set-Log -Level 'V2' -Message "Start Main Logic"
+Write-Log -Level 'V2' -Message "Start Main Logic"
 
 #Setup AWS CLI connection if it is not already established
 Set-AWSSession -Test:$True -AWSProfile 'nonprod'
 
 #Perform AWS action
-Set-Log -Level 'V2' -Message "Peform action"
-Set-Log -Level 'V3' -Message "Type" -Value $Action
+Write-Log -Level 'V2' -Message "Peform action"
+Write-Log -Level 'V3' -Message "Type" -Value $Action
 
 Invoke-Ec2Command -Action $Action -JsonPath $JsonPath
 #Invoke-Ec2Command -Action $Action -JsonPath $JsonPath -TagSpecification $TagJson
