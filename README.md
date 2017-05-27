@@ -1,5 +1,5 @@
 # powershell-sous-chef
-PowerShell Library used for Cloud and Chef automation.
+A PowerShell module helping with Chef and Cloud automation.
 
 ## Purpose
 Sous-Chef is a PowerShell module offering advanced functions to be reused in scripts, Chef cookbooks or any other tools requiring to execute PowerShell to automate tasks on Windows systems.
