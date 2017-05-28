@@ -283,6 +283,74 @@ Function Invoke-Executable {
 	} #End of End block
 } #Enf of function
 
+Function Test-Partition {
+  <#
+		.SYNOPSIS
+		Send commands to AWS API to manipulate EC2 objects.
+		.DESCRIPTION
+		The function send commands using AWS CLI (aws.exe) to get describe, edit,
+		create or delete EC2 objects.
+		.EXAMPLE
+		Run-Ec2Commands -Action
+  #>
+  #[CmdletBinding()]
+  Param (
+		[Parameter(Mandatory=$True,
+		ValueFromPipeline=$True,
+		ValueFromPipelineByPropertyName=$True,
+		HelpMessage='Drive Letter')]
+		[ValidateLength(1,1)]
+		[string]$DriveLetter,
+
+		[Parameter(Mandatory=$False,
+		ValueFromPipeline=$True,
+		ValueFromPipelineByPropertyName=$True,
+		HelpMessage='Should the partition be the only one on the disk?')]
+		[ValidateLength(1,30)]
+		[string]$CheckDedicated
+  )
+
+	Begin {
+		$MyInvocation | Write-Invocation
+		Write-Log -Level 'V2' -Message "Begin"
+
+  }
+  Process {
+		Write-Log -Level 'V2' -Message "Process"
+
+		$Partition = Get-Partition | Where DriveLetter -eq $DriveLetter
+		If ($Partition) {
+		    Write-Log -Level 'V3' -Message "Partition found"
+
+		    If ($CheckDedicated) {
+		        Write-Log -Level 'V3' -Message 'Checking dedicated disk'
+
+						#Count the number of partitions on the same disk
+		        $DiskPartitions = Get-Partition -DiskNumber $Partition.DiskNumber
+		        $DiskCount = ($DiskPartitions | Measure).Count
+
+						#Return result depending if more than one partition
+		        If ($DiskCount -eq 1) {
+							Write-Log -Level 'V3' -Message "Disk dedicated to partition"
+							Return $True
+		        } Else {
+							Write-Log -Level 'V3' -Message 'Disk hosts other partitions'
+							Return $False
+		        }
+		    } Else {
+					Return $True
+		    }
+		} Else {
+			Write-Log -Level 'V3' -Message 'Partition not found'
+			Return $False
+		} #End of condition Partition
+
+	} #End of Process block
+	End {
+		Write-Log -Level 'V2' -Message "End"
+	} #End of End block
+} #Enf of function
+
 ################################################################################
 # Network / SMB
 ################################################################################
