@@ -40,17 +40,44 @@ Param (
 Function  Import-Library {
 	Param (
 		[string]$Name,
-		[string]$Path
+		[string]$Path = 'C:\Program Files\WindowsPowerShell\Modules'
 	)
 	Write-Verbose 'Checking if resource is loaded'
 
 	#Test if module is already loaded, if loaded end of execution
-	If (Get-Module | Where-Object {$_.Path -like "*$Module*" }) {
+	If (Get-Module | Where-Object {$_.Path -like "*$Name*" }) {
 		Write-Verbose '[+] Module Loaded'
 	} Else {
 		Write-Verbose '[-] Module Not Loaded'
 
-		#Initialize resource path if not provided in arguments
+        #Method 01: Try to find module in default PowerShell folder
+        $Folder = [io.path]::GetFileNameWithoutExtension($Name)
+        Try {
+            $ModulePath = Get-Item $Path\*$Folder* -ErrorAction Stop
+            Write-Verbose '[+] Module found in path'
+            $ModulePath.FullName
+
+            #Try to find the module file (*.psm1 in folder)
+            Try {
+                $ModuleFilePath = Get-ChildItem -Path $ModulePath -Filter '*.psm1' -Recurse
+                Write-Verbose "[+] Module file found in folder"
+                $ModuleFilePath.FullName
+
+                Import-Module $ModuleFilePath.FullName
+                Return
+
+            } Catch {
+                Write-Verbose '[-] Module file not found in path'
+            }
+
+            $ModuleFilePath = Get-ChildItem -Path $ModulePath -Filter '*.psm1' -Recurse
+            $ModuleFilePath.FullName
+        } Catch {
+            Write-Verbose '[-] Module not found in path'
+        }
+
+		#Method 02: Try to find module in script folder
+        #Initialize resource path if not provided in arguments
 		If (!($Path)) {
 			$Path = Split-Path $Invocation.MyCommand.Path
 			#$Path	= Split-Path -Path $Path
@@ -99,7 +126,7 @@ Function  Import-Library {
 ################################################################################
 #Start execution
 $Invocation = $MyInvocation
-Import-Library -Name $Module
+Import-Library -Name 'sous-chef.psm1'
 $Invocation | Write-Invocation -Main:$True -Verbose:$VerbosePreference
 
 #Check the connection to AWS works
