@@ -351,6 +351,104 @@ Function Test-Partition {
 	} #End of End block
 } #Enf of function
 
+Function Set-ServiceAccount {
+  <#
+		.SYNOPSIS
+		Modify the account of a Windows Service.
+		.DESCRIPTION
+		The function stops and change the username and password of a Windows Service
+		before starting it again.
+		.EXAMPLE
+		.\Set-ServiceAccount.ps1 -Name 'MSSQLSERVER' -Username '.\svc-sql-new' -Password 'Passw0rd' -Verbose
+		.\Set-ServiceAccount.ps1 -Name 'SQLSERVERAGENT' -Username '.\svc-sql-new' -Password 'Passw0rd' -Verbose
+  #>
+  #[CmdletBinding()]
+  Param (
+		[Parameter(Mandatory=$True,
+		ValueFromPipeline=$True,
+		ValueFromPipelineByPropertyName=$True,
+		HelpMessage='Name of the service (Service name, not Display Name)')]
+		[ValidateLength(1,50)]
+		[string]$Name,
+
+		[Parameter(Mandatory=$True,
+		ValueFromPipeline=$True,
+		ValueFromPipelineByPropertyName=$True,
+		HelpMessage='Username of the Log On account')]
+		[ValidateLength(1,50)]
+		[string]$Username,
+
+		[Parameter(Mandatory=$True,
+		ValueFromPipeline=$True,
+		ValueFromPipelineByPropertyName=$True,
+		HelpMessage='Password of the Log On account')]
+		[ValidateLength(1,50)]
+		[string]$Password
+  )
+
+	Begin {
+		$MyInvocation | Write-Invocation
+		Write-Log -Level 'V2' -Message "Begin"
+
+		#Test if service exists
+    Try {
+        $Service = Get-Service $Name -ErrorAction Stop
+        Write-Log -Level 'V3' -Message '[+] Service exists'
+    } Catch {
+        Write-Log -Level 'V3' -Message '[-] Service does not exists'
+        Return
+    }
+  }
+  Process {
+		Write-Log -Level 'V2' -Message "Process"
+
+    #Test if service is running
+    If ($Service.Status -eq 'Running') {
+        Write-Log -Level 'V3' -Message '[+] Service is running'
+        Write-Log -Level 'V3' -Message '[!] Stopping service'
+        Stop-Service -Name $Name -Verbose:$VerbosePreference -Force
+    } Else {
+        Write-Log -Level 'V3' -Message '[-] Service is not running'
+    }
+
+    #Change the service account
+    Try {
+        $Service = GWMI win32_service | Where-Object Name -like *$Name*
+        $Service.Change( `
+            $null, ` #DisplayName
+            $null, ` #PathName
+            $null, ` #ServiceType
+            $null, ` #ErrorControl
+            $null, ` #StartMode
+            $null, ` #DesktopInteract
+            $Username, ` #StartName
+            $Password, ` #StartPassword
+            $null, ` #LoadOrderGroup
+            $null, ` #LoadOrderGroupDependencies
+            $null)  #ServiceDependencies
+    } Catch {
+        Write-Log -Level 'V3' -Message '[!] An exception happened while trying to change the service'
+    }
+
+    #Restart the service
+    Start-Service -Name $Name
+
+	} #End of Process block
+	End {
+		Write-Log -Level 'V2' -Message "End"
+
+		#Test if the service is running under the new account
+		$Test = GWMI win32_service | Where-Object Name -like *$Name*
+		If ($Test.StartName -eq $Username) {
+				Write-Log -Level 'V3' -Message '[+] Service account successfully changed'
+		} Else {
+				Write-Log -Level 'V3' -Message '[-] Error, service use a different account'
+				$Test.StartName
+		}
+
+	} #End of End block
+} #Enf of function
+
 ################################################################################
 # Network / SMB
 ################################################################################
